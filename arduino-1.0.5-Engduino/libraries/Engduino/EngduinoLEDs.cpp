@@ -251,24 +251,27 @@ void EngduinoLEDsClass::_setLED(uint8_t LEDidx, colour c, uint8_t brightness)
 * 
 */
 void EngduinoLEDsClass::_setLED(uint8_t LEDidx, uint8_t r, uint8_t g, uint8_t b)
-{	uint16_t sum;
+{	
 
 	LEDidx &= 0x0F;		// We only have 16 LEDS
 	r = r << 4;			// We only use 16 brightness levels to avoid flickering
 	g = g << 4;			// Turn the 0-15 scale into a 0-255 scale; makes maths easier
 	b = b << 4;
 
-	// The brightest colours cause a reset on the engduino v1.0
-	// when running on USB. So we limit what we allow someone to choose.
-	// This subtraction avoids division, which is slow.
-	//
-	sum = r + g + b;
-	while (sum > 0x240) {	// Empirically determined: (0x24 << 4)
-		r -= 1;
-		g -= 1;
-		b -= 1;
+	#if defined(__BOARD_ENGDUINOV1) || defined(__BOARD_ENGDUINOV2)// Only for version 1 and 2
+		// The brightest colours cause a reset on the engduino v1.0
+		// when running on USB. So we limit what we allow someone to choose.
+		// This subtraction avoids division, which is slow.
+		//
+		uint16_t sum;
 		sum = r + g + b;
-	}
+		while (sum > 0x240) {	// Empirically determined: (0x24 << 4)
+			r -= 1;
+			g -= 1;
+			b -= 1;
+			sum = r + g + b;
+		}
+	#endif
 	
 	RSet[LEDidx] = r;
 	GSet[LEDidx] = g;
@@ -660,7 +663,8 @@ ISR(TIMER4_COMPA_vect)
 	// and only set the LED on when we overflow the count; it is otherwise
 	// set off.
 	//
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < 16; i++) 
+	{
 		uint8_t ra = EngduinoLEDs.RAccum[i];
 		uint8_t ga = EngduinoLEDs.GAccum[i];
 		uint8_t ba = EngduinoLEDs.BAccum[i];
